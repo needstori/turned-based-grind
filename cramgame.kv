@@ -1,0 +1,97 @@
+#:kivy 2.0.0
+
+<MainMenuScreen>:
+    farm_button: farm_button
+    boss_button: boss_button
+    inventory_button: inventory_button
+    GridLayout:
+        padding: 10
+        spacing: 20
+        rows: 3
+        Button:
+            text: "Farming"
+            id: farm_button
+        Button:
+            text: "Boss Fight"
+            id: boss_button
+        Button:
+            text: "Inventory"
+            id: inventory_button
+
+
+<FarmScreen>:
+    battle_controls: battle_controls
+    battle_display: battle_display
+    GridLayout:
+        spacing: 5
+        rows: 3
+        Label:
+            size_hint_y: 1
+            text: "Area details"
+            canvas.before:
+                Color:
+                    rgba: 0.2, 0.2, 0.2, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+        BattleDisplay:
+            id: battle_display
+            size_hint_y: 5
+            padding: 20
+            spacing: 20
+        BattleControls:
+            id: battle_controls
+            size_hint_y: 4
+
+
+<BossScreen>:
+    GridLayout:
+        spacing: 5
+        rows: 3
+        Label:
+            size_hint_y: 1
+            text: "Area details"
+            canvas.before:
+                Color:
+                    rgba: 0.2, 0.2, 0.2, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+        Label:
+            size_hint_y: 5
+            text: "Combat display"
+            canvas.before:
+                Color:
+                    rgba: 0.2, 0.2, 0.2, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+        Label:
+            size_hint_y: 4
+            text: "Control and text area"
+            canvas.before:
+                Color:
+                    rgba: 0.2, 0.2, 0.2, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+<InventoryScreen>:
+    inventory: inventory
+    item_weapon: item_weapon
+    item_armour: item_armour
+    item_amulet: item_amulet
+    GridLayout:
+        rows: 2
+        GridLayout:
+            cols: 3
+            padding: 20
+            spacing: 10
+            ItemSlot:
+                id: item_weapon
+            ItemSlot:
+                id: item_armour
+            ItemSlot:
+                id: item_amulet
+        InventoryDisplay:
+            id: inventory
