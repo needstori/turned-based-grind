@@ -8,7 +8,10 @@ class ItemSlotSet:
 
     def get_item(self, item_slot_id):
         # TODO: Add error handling
-        return self.item_slots[item_slot_id]
+        if item_slot_id in self.item_slots.keys():
+            return self.item_slots[item_slot_id]
+        else:
+            return None
 
 
 class ItemSlotSetTypes:

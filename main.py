@@ -247,6 +247,11 @@ class InventoryScreen(GameScreen):
     item_amulet = ObjectProperty(None)
     # TODO: Add a back button to return to the main menu from the inventory
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.to_be_swapped_details = None
+
     def on_pre_enter(self, **kwargs):
         self.inventory.setup_inventory_slots(self.game.inventory)
         self.inventory.parent_screen = self
@@ -258,13 +263,50 @@ class InventoryScreen(GameScreen):
         self.item_amulet.setup_item_slot("Amulet", self.game.player.equipped_items)
         self.item_amulet.parent_screen = self
 
-    def initiate_item_swap(self, item_a, button_initiated):
+    def update_ui(self):
+        self.item_weapon.update_item_slot(self.game.player.equipped_items)
+        self.item_armour.update_item_slot(self.game.player.equipped_items)
+        self.item_amulet.update_item_slot(self.game.player.equipped_items)
+        self.inventory.update_inventory_slots(self.game.inventory)
+
+    def initiate_item_swap(self, item_a_details, button_initiated):
         self.inventory.prepare_for_item_swap()
         self.item_weapon.prepare_for_item_swap()
         self.item_armour.prepare_for_item_swap()
         self.item_amulet.prepare_for_item_swap()
 
         button_initiated.disabled = True
+
+        self.to_be_swapped_details = item_a_details
+
+    def get_item(self, item_details):
+        item_to_return = None
+        if item_details[0] == "Inventory":
+            item_to_return = self.game.inventory[item_details[1]]
+        elif item_details[0] == "Equipped":
+            item_to_return = self.game.player.equipped_items[item_details[1]]
+        else:
+            print("Should not be getting an item that isn't in the inventory or equipped")
+
+        return item_to_return
+
+    # Swaps the items with the details given (Inventory/Equipped, Slot ID/Index)
+    def swap_items(self, item_b_details):
+        # Get both items first
+        item_a = self.get_item(self.to_be_swapped_details)
+        item_b = self.get_item(item_b_details)
+
+        # Overwrite the slots each item was in
+        items_to_swap = [(item_a, item_b_details), (item_b, self.to_be_swapped_details)]
+        for item_to_swap in items_to_swap:
+            if item_to_swap[1][0] == "Inventory":
+                self.game.inventory[item_to_swap[1][1]] = item_to_swap[0]
+            elif item_to_swap[1][0] == "Equipped":
+                self.game.player.equipped_items[item_to_swap[1][1]] = item_to_swap[0]
+
+        # Update the UI
+        self.inventory.end_item_swap(self.game.inventory)
+        self.update_ui()
 
 
 class InventoryDisplay(GridLayout):
@@ -288,7 +330,7 @@ class InventoryDisplay(GridLayout):
         self.current_inventory = inventory
         for i in range(4):
             new_inventory_button = Button(text="Empty")
-            if i < len(inventory):
+            if inventory[i] is not None:
                 new_inventory_button.text = inventory[i].name
             else:
                 new_inventory_button.disabled = True
@@ -296,17 +338,33 @@ class InventoryDisplay(GridLayout):
             self.add_widget(new_inventory_button)
             self.inventory_buttons.append(new_inventory_button)
 
+    def update_inventory_slots(self, inventory):
+        self.current_inventory = inventory
+        for index, inventory_button in enumerate(self.inventory_buttons):
+            if inventory[index] is not None:
+                inventory_button.text = inventory[index].name
+                inventory_button.disabled = False
+            else:
+                inventory_button.text = "Empty"
+                inventory_button.disabled = True
+
     def inventory_button_press(self, item_index, instance):
         # TODO: Make these buttons state based so they will react differently in different states of the
         #   overall display, less confusing binding and unbinding that way.
-        self.parent_screen.initiate_item_swap(self.current_inventory[item_index], instance)
-        pass
+        if self.picking_mode:
+            self.parent_screen.swap_items(("Inventory", item_index))
+        else:
+            self.parent_screen.initiate_item_swap(("Inventory", item_index), instance)
 
     def prepare_for_item_swap(self):
+        self.picking_mode = True
         for i in range(4):
             button = self.inventory_buttons[i]
             button.disabled = False
-            # TODO: unbind stuff :S
+
+    def end_item_swap(self, inventory):
+        self.picking_mode = False
+        self.update_inventory_slots(inventory)
 
 
 class ItemSlot(GridLayout):
@@ -328,14 +386,17 @@ class ItemSlot(GridLayout):
                                 size_hint_y=1)
         self.slot_button = Button(text="Empty",
                                   size_hint_y=4)
-        slot_item = item_slots.get_item(slot_id)
+        self.update_item_slot(item_slots)
+        self.add_widget(self.slot_label)
+        self.add_widget(self.slot_button)
+
+    def update_item_slot(self, item_slots):
+        slot_item = item_slots.get_item(self.slot_id)
         if slot_item is not None:
             self.slot_button.text = str(slot_item)
         else:
             self.slot_button.text = "Empty"
             self.slot_button.disabled = True
-        self.add_widget(self.slot_label)
-        self.add_widget(self.slot_button)
 
     def prepare_for_item_swap(self):
         self.slot_button.disabled = False
@@ -367,11 +428,14 @@ class CramGame:
         self.player.name = "Player"
 
     def load_inventory(self):
+        # Currently fix inventory size at 4?
         self.inventory = []
+        for i in range(4):
+            self.inventory.append(None)
         # TODO: Remove this code that adds and item for testing
         dropped_item = Item()
         dropped_item.stats.add_stat(Stats.MAXIMUM_HEALTH, 5)
-        self.inventory.append(dropped_item)
+        self.inventory[0] = dropped_item
 
     def start_farming(self):
         self.current_monsters = []
